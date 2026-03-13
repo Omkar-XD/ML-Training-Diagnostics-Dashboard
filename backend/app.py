@@ -1,7 +1,8 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import uuid
+import os
 
 from preprocessing import basic_eda, handle_missing, split_data
 from train import train
@@ -9,49 +10,108 @@ from utils import save_run
 
 app = FastAPI()
 
+# CORS configuration (allow local + deployed frontend)
+
+origins = [
+"http://localhost:5173",
+"https://ml-training-diagnostics-dashboard.vercel.app"
+]
+
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+CORSMiddleware,
+allow_origins=origins,
+allow_credentials=True,
+allow_methods=["*"],
+allow_headers=["*"],
 )
+
+# Ensure data directory exists
+
+os.makedirs("data", exist_ok=True)
 
 DATA_PATH = "data/cleaned.csv"
 
+@app.get("/")
+def root():
+return {"message": "ML Training Diagnostics API running"}
+
 @app.post("/upload")
 async def upload_csv(file: UploadFile = File(...)):
-    df = pd.read_csv(file.file)
+try:
+df = pd.read_csv(file.file)
+
+```
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Uploaded CSV is empty")
+
     df = handle_missing(df, "drop")
+
     df.to_csv(DATA_PATH, index=False)
-    return basic_eda(df)
+
+    eda_result = basic_eda(df)
+
+    return {
+        "message": "File uploaded successfully",
+        "rows": len(df),
+        "columns": list(df.columns),
+        "eda": eda_result
+    }
+
+except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
+```
 
 @app.post("/train")
 async def train_model(payload: dict):
-    df = pd.read_csv(DATA_PATH)
 
-    X = df.iloc[:, :-1]
-    y = df.iloc[:, -1]
-
-    X_train, X_val, y_train, y_val = split_data(X, y)
-
-    history, diagnostics = train(
-        payload["model_type"],
-        X_train,
-        X_val,
-        y_train,
-        y_val,
-        payload
+```
+if not os.path.exists(DATA_PATH):
+    raise HTTPException(
+        status_code=400,
+        detail="No dataset uploaded. Please upload CSV first."
     )
 
-    run_id = str(uuid.uuid4())
-    save_run(run_id, {
-        "payload": payload,
-        "history": history,
-        "diagnostics": diagnostics
-    })
+df = pd.read_csv(DATA_PATH)
 
-    return {
-        "history": history,
-        "diagnostics": diagnostics
-    }
+if df.shape[1] < 2:
+    raise HTTPException(
+        status_code=400,
+        detail="Dataset must have at least one feature and one target column"
+    )
+
+X = df.iloc[:, :-1]
+y = df.iloc[:, -1]
+
+X_train, X_val, y_train, y_val = split_data(X, y)
+
+model_type = payload.get("model_type")
+
+if not model_type:
+    raise HTTPException(
+        status_code=400,
+        detail="model_type is required in request payload"
+    )
+
+history, diagnostics = train(
+    model_type,
+    X_train,
+    X_val,
+    y_train,
+    y_val,
+    payload
+)
+
+run_id = str(uuid.uuid4())
+
+save_run(run_id, {
+    "payload": payload,
+    "history": history,
+    "diagnostics": diagnostics
+})
+
+return {
+    "run_id": run_id,
+    "history": history,
+    "diagnostics": diagnostics
+}
+
