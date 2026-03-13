@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000'
+const API_BASE = 'https://ml-training-diagnostics-dashboard.onrender.com/'
 
 export async function uploadCSV(file) {
   const formData = new FormData()
