@@ -12,14 +12,25 @@ from utils import save_run
 app = FastAPI()
 
 # Allow frontend domains
-origins = [
+# Set ALLOWED_ORIGINS env var to a comma-separated list of origins,
+# or use defaults below.
+default_origins = [
     "http://localhost:5173",
-    "https://ml-training-diagnostics-dashboard.vercel.app"
+    "http://localhost:3000",
+    "https://ml-training-diagnostics-dashboard.vercel.app",
 ]
+
+# Read custom origins from environment if set
+env_origins = os.getenv("ALLOWED_ORIGINS", "")
+if env_origins:
+    origins = [o.strip() for o in env_origins.split(",") if o.strip()]
+else:
+    origins = default_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",   # allow ALL Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
