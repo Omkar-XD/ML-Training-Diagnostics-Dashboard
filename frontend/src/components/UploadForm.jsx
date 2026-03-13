@@ -3,7 +3,7 @@ import { uploadCSV } from '../api'
 
 function UploadForm({ onUploadSuccess }) {
   const [file, setFile] = useState(null)
-  const [eda, setEda] = useState(null)
+  const [uploadResult, setUploadResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -18,14 +18,17 @@ function UploadForm({ onUploadSuccess }) {
 
     try {
       const result = await uploadCSV(file)
-      setEda(result)
-      onUploadSuccess(result)
+      setUploadResult(result)
+      onUploadSuccess(result.eda || result)
     } catch (err) {
       setError(err.message || 'Upload failed')
     } finally {
       setLoading(false)
     }
   }
+
+  // The API returns { message, rows, columns, eda: { shape, dtypes, missing, head } }
+  const edaData = uploadResult?.eda
 
   return (
     <div className="bg-white p-4 rounded shadow mb-6">
@@ -47,10 +50,16 @@ function UploadForm({ onUploadSuccess }) {
 
       {error && <p className="text-red-600 mt-2">{error}</p>}
 
-      {eda && (
+      {uploadResult && (
         <div className="mt-4 text-sm">
-          <p><b>Shape:</b> {eda.shape.join(' × ')}</p>
-          <p><b>Missing values:</b> {JSON.stringify(eda.missing)}</p>
+          <p><b>Rows:</b> {uploadResult.rows}</p>
+          <p><b>Columns:</b> {uploadResult.columns?.join(', ')}</p>
+          {edaData?.shape && (
+            <p><b>Shape:</b> {Array.isArray(edaData.shape) ? edaData.shape.join(' × ') : JSON.stringify(edaData.shape)}</p>
+          )}
+          {edaData?.missing && (
+            <p><b>Missing values:</b> {JSON.stringify(edaData.missing)}</p>
+          )}
         </div>
       )}
     </div>
