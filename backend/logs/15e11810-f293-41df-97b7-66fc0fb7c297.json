@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "model_type": "tree"
+  },
+  "history": [
+    {
+      "train_loss": 0.3856972603785102,
+      "val_loss": 2.121360808044893
+    }
+  ],
+  "diagnostics": []
+}

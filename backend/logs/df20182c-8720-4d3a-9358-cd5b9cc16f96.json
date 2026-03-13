@@ -1,0 +1,21 @@
+{
+  "payload": {
+    "model_type": "linear"
+  },
+  "history": [
+    {
+      "train_loss": 27102249.73126139,
+      "val_loss": 49830096.85590839
+    }
+  ],
+  "diagnostics": [
+    {
+      "type": "Underfitting",
+      "message": "Both training and validation loss remain high. Model is too simple."
+    },
+    {
+      "type": "Unstable training",
+      "message": "Loss exploded or became NaN. Learning rate may be too high."
+    }
+  ]
+}

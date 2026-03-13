@@ -1,0 +1,17 @@
+{
+  "payload": {
+    "model_type": "linear"
+  },
+  "history": [
+    {
+      "train_loss": 2.7037165989728713,
+      "val_loss": 3.1990044685889067
+    }
+  ],
+  "diagnostics": [
+    {
+      "type": "Underfitting",
+      "message": "Both training and validation loss remain high. Model is too simple."
+    }
+  ]
+}
