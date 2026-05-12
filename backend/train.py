@@ -185,7 +185,7 @@ def train(model_type, X_train, X_val, y_train, y_val, params):
 
                 val_loss = loss_fn(
                     val_preds,
-                    y_val_t
+                    y_val_t 
                 )
 
             history.append({
