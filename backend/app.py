@@ -30,7 +30,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\\.vercel\\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,7 +60,9 @@ def root():
 
 @app.post("/upload")
 async def upload_csv(file: UploadFile = File(...)):
+
     try:
+
         # Read CSV
         df = pd.read_csv(file.file)
 
@@ -72,7 +74,6 @@ async def upload_csv(file: UploadFile = File(...)):
             )
 
         # Handle missing values
-        # Better than blindly dropping rows
         df = handle_missing(df, "fill")
 
         # Save cleaned dataset
@@ -91,6 +92,7 @@ async def upload_csv(file: UploadFile = File(...)):
         }
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -105,6 +107,7 @@ async def train_model(payload: dict):
 
     # Ensure dataset exists
     if not os.path.exists(DATA_PATH):
+
         raise HTTPException(
             status_code=400,
             detail="No dataset uploaded. Please upload CSV first."
@@ -115,6 +118,7 @@ async def train_model(payload: dict):
 
     # Validate dataset structure
     if df.shape[1] < 2:
+
         raise HTTPException(
             status_code=400,
             detail="Dataset must contain at least one feature and one target column"
@@ -124,38 +128,31 @@ async def train_model(payload: dict):
     # TARGET COLUMN
     # =========================
 
-    target_column = payload.get("target_column", "Price")
+    target_column = payload.get("target_column")
+
+    if not target_column:
+
+        raise HTTPException(
+            status_code=400,
+            detail="target_column is required"
+        )
 
     if target_column not in df.columns:
+
         raise HTTPException(
             status_code=400,
             detail=f"Target column '{target_column}' not found in dataset"
         )
 
     # =========================
-    # SPLIT FEATURES/TARGET
+    # SPLIT FEATURES / TARGET
     # =========================
 
     X = df.drop(columns=[target_column])
     y = df[target_column]
 
     # =========================
-    # ENCODE CATEGORICAL FEATURES
-    # =========================
-
-    categorical_cols = X.select_dtypes(
-        include=["object", "category"]
-    ).columns
-
-    if len(categorical_cols) > 0:
-        X = pd.get_dummies(
-            X,
-            columns=categorical_cols,
-            drop_first=True
-        )
-
-    # =========================
-    # TRAIN / VALIDATION SPLIT
+    # PREPROCESS + SPLIT
     # =========================
 
     X_train, X_val, y_train, y_val = split_data(X, y)
@@ -167,6 +164,7 @@ async def train_model(payload: dict):
     model_type = payload.get("model_type")
 
     if not model_type:
+
         raise HTTPException(
             status_code=400,
             detail="model_type is required"
@@ -208,6 +206,6 @@ async def train_model(payload: dict):
         "run_id": run_id,
         "history": history,
         "diagnostics": diagnostics,
-        "features_used": list(X.columns),
+        "features_used": list(X_train.columns),
         "target_column": target_column
     }
